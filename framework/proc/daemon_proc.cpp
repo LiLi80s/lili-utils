@@ -9,11 +9,13 @@
 
 #include "../logger/logger.h"
 
-#define __DEBUG_DAEMON 0
+void daemonize(const char *cmd);
+
+#define __DEBUG_DAEMON 1
 
 #if __DEBUG_DAEMON
 
-int main(int argc, int argv[]){
+int main(int argc, char** argv){
 
     if (argc < 2) return -1;
     daemonize(argv[1]);
