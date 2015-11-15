@@ -1,4 +1,3 @@
-
 /*************************************************************************
 * Copyright Liqun LIU [liulq80s@gmail.com]
 * 
@@ -20,37 +19,43 @@
 
 
 #include <iostream>
-#include <netinet/net.h>
+//#include <netinet/net.h>
 #include <map>
 #include <stdlib.h>
 #include <stdio.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h> 
+#include <arpa/inet.h>
+#include "actor.h"
+#include "message.h"
+#include "message_queue.h"
+#include "mutex.h"
 
-#include "Actor.h"
-
-
-#define MAX_CLIENT = 1000;
-#define MAX_LENGTH = 2000;
-
+#define MAX_CLIENT   1000
+#define MAX_LENGTH   2000
+#define MAX_PENDING  1000
 /* Socket Listener for Monitoring the Specified Ip and Port. */
 
 class SocketListener : public Actor{
 private:
 
     map<int, MessageQueue &> mMessageQueues;
-    const char* mIpAddr;
-    const char* mName;
+    char* mIpAddr;
+    char* mName;
     unsigned short mPort;
     fd_set mFDSet;
     int mListenerFD;
+    int mMaxFD;
     int mClients[MAX_CLIENT];
 
 private:
 
     static class SocketContainer{
-        static map<const char*, SocketListener* > mSocketListeners; 
-        static SocketListener* createSocketListener(const char* name, const char* ipAddr, unsigned short port)
+        static map<char*, SocketListener* > mSocketListeners; 
+        static SocketListener* createSocketListener(char* name, char* ipAddr, unsigned short port)
         {
-            map<const char*, SocketListener* >::iterator itor = mSocketListeners.find(name);
+            map<char*, SocketListener* >::iterator itor = mSocketListeners.find(name);
             if (itor != mSocketListeners.end()) 
                 return (SocketListener*)0;
             
@@ -67,15 +72,13 @@ public:
 
 public:
 
-    SocketListener(const char* name,
-        const char * ipAddr, unsigned short port):
-        mName(name),mMessageQueue(messageQueue),
-        mIpAddr(ipAddr),mPort(port)
+    SocketListener(char* name, char* ipAddr, unsigned short port):
+        mName(name), mIpAddr(ipAddr), mPort(port)
     {
         mListenerFD = initialize();
         FD_ZERO(&mFDSet);
-        FD_SET(mListenFD, &mFDSet);
-        for (i = 0; i < FD_SETSIZE; i++)
+        FD_SET(mListenerFD, &mFDSet);
+        for (int i = 0; i < MAX_CLIENT; i++)
             mClients[i] = -1;                 /* -1 indicates available entry */
     }
 
@@ -86,7 +89,7 @@ public:
     void run()
     {
         while(1){
-            int nbr = select();
+            int nbr = waiting();
             if ( nbr > 0 ){
                 if (incoming())
                     fork();
@@ -108,12 +111,12 @@ private:
             htonl(inet_pton(AF_INET, mIpAddr, &(servaddr.sin_addr)));
             servaddr.sin_port        = htons(mPort);
         }
-        bind(listenfd, (SA *) &servaddr, sizeof(servaddr));
-        listen(listenfd, LISTENQ);
+        bind(listenfd, (struct sockaddr *) &servaddr, sizeof(servaddr));
+        listen(listenfd, MAX_PENDING  );
         return listenfd;
     }
 
-    int select( void )
+    int waiting( void )
     {
         return select(mMaxFD+1, &mFDSet, NULL, NULL, NULL);
     }
@@ -125,17 +128,18 @@ private:
 
     int fork( void )
     {
-        int clilen = sizeof(cliaddr);
-        int connfd = accept(listenfd, (SA *) &cliaddr, &clilen);
-
-        for (i = 0; i < FD_SETSIZE; i++){
-            if (mClient[i] == -1) {
-                mClient[i] = connfd;     /* save descriptor */
+        socklen_t clilen = (socklen_t)sizeof(sockaddr);
+        struct sockaddr_in cliaddr;
+        int connfd = accept(mListenerFD, (struct sockaddr *)(&cliaddr), &clilen);
+        int i = 0;
+        for (; i < MAX_CLIENT; i++){
+            if (mClients[i] == -1) {
+                mClients[i] = connfd;     /* save descriptor */
                 break;
             }
         }
 
-        if (i == FD_SETSIZE){
+        if (i == MAX_CLIENT){
             std::cout<<"too many clients"<<std::endl;
             return -1;
         }
@@ -148,19 +152,20 @@ private:
     }
 private:
 
-    char mDataBuffer[MAX_LENGTH] = {0};
+    char mDataBuffer[MAX_LENGTH];
 
     void queue( void )
     {
         int sockfd = 0;
-        for (i = 0; i <= MAX_CLIENT; i++) {   /* check all clients for data */
-            if ( (sockfd = mClient[i]) < 0)
+        for (int i = 0; i <= MAX_CLIENT; i++) {   /* check all clients for data */
+            if ( (sockfd = mClients[i]) < 0)
                continue;
             if (FD_ISSET(sockfd, &mFDSet)) {
-                if ( (n = read(sockfd, mDataBuffer, MAX_LENGTH)) == 0) {
+                int nbrOfBytes = 0;
+                if ( (nbrOfBytes = read(sockfd, mDataBuffer, MAX_LENGTH)) == 0) {
                     close(sockfd);
                     FD_CLR(sockfd, &mFDSet);
-                    mClient[i] = -1;
+                    mClients[i] = -1;
                     //Close Threads and Delete Related Services
                 } else{
                     // Parse the Package.
