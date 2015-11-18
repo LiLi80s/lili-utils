@@ -14,7 +14,9 @@
 # limitations under the License.
 #***************************************************************************/
 headers = message_queue.h message.h actor.h socket.h mutex.h 
-maintest : $(headers) main.cpp 
-	cc -o maintest main.cpp 
+source = socket.cpp
+lib = -lstdc++
+maintest : $(headers) $(source) main.cpp
+	cc -o maintest main.cpp $(source) $(lib)
 clean : 
 	rm maintest
