@@ -37,42 +37,44 @@
 #define MAX_PENDING  1000
 /* Socket Listener for Monitoring the Specified Ip and Port. */
 
-class SocketListener : public Actor{
+class SocketActor : public Actor{
 private:
 
     map<int, MessageQueue &> mMessageQueues;
     char* mIpAddr;
     char* mName;
-    unsigned short mPort;
+    short mPort;
     fd_set mFDSet;
     int mListenerFD;
     int mMaxFD;
     int mClients[MAX_CLIENT];
-
+    bool isListening(){return (mPort == -1) ? false:true;}
 private:
 
-    static class SocketContainer{
-        static map<char*, SocketListener* > mSocketListeners; 
-        static SocketListener* createSocketListener(char* name, char* ipAddr, unsigned short port)
+    static class SocketActors{
+        static map<char*, SocketActor* > mSocketActorsContainer; 
+        static SocketActor* createSocketListener(char* name, char* ipAddr, short port, MessageQueue *in, MessageQueue *out)
         {
-            map<char*, SocketListener* >::iterator itor = mSocketListeners.find(name);
-            if (itor != mSocketListeners.end()) 
-                return (SocketListener*)0;
+            map<char*, SocketActor* >::iterator itor = mSocketActorsContainer.find(name);
+            if (itor != mSocketActorsContainer.end()) 
+                return (SocketActor*)0;
             
-            SocketListener* sl = new SocketListener(name,ipAddr,port);
-            mSocketListeners.insert(std::make_pair(name,sl));
+            SocketActor* sa = new SocketActor(name,ipAddr,port,in,out);
+            mSocketActorsContainer.insert(std::make_pair(name,sa));
             
-            return sl;
+            return sa;
         }
-    }mSocketContainer;
+    }mSocketActors;
 
 public:
 
-    static SocketContainer& sockets() {return mSocketContainer;}
+    static SocketActors& sockets() {return mSocketActors;}
 
 public:
-
-    SocketListener(char* name, char* ipAddr, unsigned short port):
+    
+    explicit SocketActor (char* name, char* ipAddr, short port,
+               MessageQueue *in, MessageQueue *out):
+        Actor(name,in,out),
         mName(name), mIpAddr(ipAddr), mPort(port)
     {
         mListenerFD = initialize();
@@ -81,7 +83,9 @@ public:
         for (int i = 0; i < MAX_CLIENT; i++)
             mClients[i] = -1;                 /* -1 indicates available entry */
     }
-
+    
+    ~SocketActor (){
+    }
     char* getMyName(){
        return mName;
     }
@@ -102,18 +106,41 @@ private:
 
     int initialize( void ) 
     {
-        int  listenfd;
-        struct sockaddr_in servaddr;
-        listenfd = socket(AF_INET, SOCK_STREAM, 0); 
-        bzero(&servaddr, sizeof(servaddr));
-        {
-            servaddr.sin_family      = AF_INET;
-            htonl(inet_pton(AF_INET, mIpAddr, &(servaddr.sin_addr)));
-            servaddr.sin_port        = htons(mPort);
+        if (isListening()){
+            int  listenfd;
+            struct sockaddr_in servaddr;
+            listenfd = socket(AF_INET, SOCK_STREAM, 0); 
+            bzero(&servaddr, sizeof(servaddr));
+            {
+                servaddr.sin_family      = AF_INET;
+                inet_pton(AF_INET, mIpAddr, &(servaddr.sin_addr));
+                servaddr.sin_port        = htons(mPort);
+            }
+            bind(listenfd, (struct sockaddr *) &servaddr, sizeof(servaddr));
+            listen(listenfd, MAX_PENDING  );
+            return listenfd;
         }
-        bind(listenfd, (struct sockaddr *) &servaddr, sizeof(servaddr));
-        listen(listenfd, MAX_PENDING  );
-        return listenfd;
+        else
+            return -1;
+    }
+
+    int connect2( char* ipAddress, short port ){
+        int sockfd;
+        struct sockaddr_in servaddr;
+
+        sockfd = socket(AF_INET, SOCK_STREAM, 0);
+
+        bzero(&servaddr, sizeof(servaddr));
+        servaddr.sin_family = AF_INET;
+        servaddr.sin_port = htons(port);
+        inet_pton(AF_INET, ipAddress, &servaddr.sin_addr);
+
+        if (0 != connect(sockfd, (struct sockaddr *) &servaddr, sizeof(servaddr))){
+            return -1;
+        }
+
+        //new SocketConnection
+        return fork(sockfd);
     }
 
     int waiting( void )
@@ -123,7 +150,10 @@ private:
 
     int incoming( void )
     {
-        return FD_ISSET(mListenerFD, &mFDSet);
+        if (isListening())
+            return FD_ISSET(mListenerFD, &mFDSet);
+        else
+            return false;
     }
 
     int fork( void )
@@ -131,6 +161,11 @@ private:
         socklen_t clilen = (socklen_t)sizeof(sockaddr);
         struct sockaddr_in cliaddr;
         int connfd = accept(mListenerFD, (struct sockaddr *)(&cliaddr), &clilen);
+        return fork (connfd);
+    }
+
+
+    int fork (int connfd){
         int i = 0;
         for (; i < MAX_CLIENT; i++){
             if (mClients[i] == -1) {
@@ -149,7 +184,11 @@ private:
             mMaxFD = connfd;                 /* for select */
 
         return 0;
+        
     }
+
+
+
 private:
 
     char mDataBuffer[MAX_LENGTH];
@@ -174,4 +213,4 @@ private:
         }
     }
 };
-#endif /*_SOCKET_H_*/
+#endif /*_SOCKET_CLI_H_*/

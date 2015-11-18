@@ -11,8 +11,6 @@
 int main( int argc, char** argv ){
     
     int nbrOfArgs = argc;
-    /*if (3 < argc){
-    }*/
     
     return 0;
 }
