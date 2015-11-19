@@ -49,7 +49,8 @@ SocketActor::SocketActor (char* name, char* ipAddr, short port,
 {
     mListenerFD = initialize();
     FD_ZERO(&mFDSet);
-    FD_SET(mListenerFD, &mFDSet);
+    if (isListening())
+        FD_SET(mListenerFD, &mFDSet);
     for (int i = 0; i < MAX_CLIENT; i++)
         mClients[i] = -1;                 /* -1 indicates available entry */
 }

@@ -73,11 +73,11 @@ public:
 
     void run();
 
+    int connect2( char* ipAddress, short port );
+
 private:
 
     int initialize( void ); 
-
-    int connect2( char* ipAddress, short port );
 
     int waiting( void );
 

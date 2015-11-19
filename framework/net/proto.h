@@ -13,33 +13,19 @@
 * See the License for the specific language governing permissions and
 * limitations under the License.
 ***************************************************************************/
-#ifndef _MESSAGE_H_
-#define _MESSAGE_H_
 
-#include <stdlib.h>
-#include <unistd.h>
-#include <memory.h>
+#ifndef _DATAHANDLER_H_
+#define _DATAHANDLER_H_
+#include <vector>
+using namespace std;
 
-#include "proto.h"
-
-#define PROTO_LENGTH 1000
-
-class Message{
+class DataHandler{
 private:
-    char *mPayload;
-    DataHandler* mDher;
+    vector<DataHandler*> mHandlers;
 public:
-
-    Message(int len){
-        mPayload = (char*) malloc(len);
-    }
-    ~Message () {
-        if (mPayload) 
-            free(mPayload);
-        mPayload = NULL; 
-    }
-    char* getBuffer( void ) {return mPayload;}
-    virtual void process( void ){mDher->process(mPayload);}
+    DataHandler(void * args);
+    virtual ~DataHandler(){}
+    virtual void process( char * data ) = 0;
 };
 
-#endif /*_MESSAGE_H_*/
+#endif /*_DATAHANDLER_H_*/
