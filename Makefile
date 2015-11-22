@@ -16,7 +16,7 @@
 headers = message_queue.h message.h actor.h socket.h mutex.h 
 source = socket.cpp
 lib = -lstdc++
-maintest : $(headers) $(source) main.cpp
+all : $(headers) $(source) main.cpp
 	cc -o maintest main.cpp $(source) $(lib)
 clean : 
 	rm maintest

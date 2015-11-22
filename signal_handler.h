@@ -25,7 +25,7 @@ using namespace std;
 #include "message_queue.h"
 #include "message.h"
 
-class SignalHander{
+class SignalHandler{
 
 private:
 
@@ -33,10 +33,10 @@ private:
     char *mOwnerName;
 public:
 
-    SignalHander(pid_t pid, char* name):mOwnerPid(pid),mOwnerName(name){}
+    SignalHandler(pid_t pid, char* name):mOwnerPid(pid),mOwnerName(name){}
     virtual ~SignalHandler(){}
-    char* getProcessName() {return mName;}
-    pid_t getProcessPid() {return mPid;}
+    char* getProcessName() {return mOwnerName;}
+    pid_t getProcessPid() {return mOwnerPid;}
     virtual int handle() = 0;
 };
 
@@ -45,12 +45,13 @@ class SignalManager{
 private:
     
     map<int , SignalHandler *> mHandlers; 
-    
+    pid_t mOwnerPid;
+    char *mOwnerName;
     SignalHandler* signalBuilder(pid_t pid, char* name, );
 public:
-    SignalHander(pid_t pid, char* name, int *sigs):
+    SignalManager(pid_t pid, char* name, int *sigs):
           mOwnerPid(pid),mOwnerName(name){}
-    virtual ~SignalHandler(){}
+    virtual ~SignalManager(){}
 
 };
 

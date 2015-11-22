@@ -36,8 +36,11 @@ public:
 
     Process(char* name, char * path):
         mPid(0),mName(name){}
+
     virtual ~Process(){}
+
     char* getName() {return mName;}
+
     pid_t getPid() {return mPid;}
 
 public:
@@ -47,6 +50,10 @@ public:
     int wait();
 
     int kill();
+
+    virtual int main();
+
+    int daemonize();
 
 };
 #endif /*_PROCESS_H_*/

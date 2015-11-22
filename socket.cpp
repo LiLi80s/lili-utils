@@ -78,9 +78,9 @@ int SocketActor::initialize( void )
         listenfd = socket(AF_INET, SOCK_STREAM, 0); 
         bzero(&servaddr, sizeof(servaddr));
         {
-            servaddr.sin_family      = AF_INET;
+            servaddr.sin_family = AF_INET;
             inet_pton(AF_INET, mIpAddr, &(servaddr.sin_addr));
-            servaddr.sin_port        = htons(mPort);
+            servaddr.sin_port = htons(mPort);
         }
         bind(listenfd, (struct sockaddr *) &servaddr, sizeof(servaddr));
         listen(listenfd, MAX_PENDING  );
