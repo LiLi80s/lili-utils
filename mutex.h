@@ -8,18 +8,18 @@
 class Mutex{
 public:
     Mutex(){
-        pthread_mutex_init(&m,NULL);
+        pthread_mutex_init(&this->m,NULL);
     }
 
     ~Mutex(){
-        pthread_mutex_destroy(&m);
+        pthread_mutex_destroy(&this->m);
     }
     void lock(){
-        pthread_mutex_lock(&m);
+        pthread_mutex_lock(&this->m);
     }
 
     void unlock(){
-        pthread_mutex_unlock(&m);
+        pthread_mutex_unlock(&this->m);
     }
     
 private:
