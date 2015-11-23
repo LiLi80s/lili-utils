@@ -11,7 +11,7 @@
 
 void daemonize(const char *cmd);
 
-#define __DEBUG_DAEMON 1
+#define __DEBUG_DAEMON 0
 
 #if __DEBUG_DAEMON
 

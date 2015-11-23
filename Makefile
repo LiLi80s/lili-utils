@@ -13,8 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #***************************************************************************/
-headers = message_queue.h message.h actor.h socket.h mutex.h 
-source = socket.cpp
+headers = message_queue.h message.h actor.h socket.h mutex.h process.h super_process.h
+source = socket.cpp process.cpp super_process.cpp
 lib = -lstdc++
 all : $(headers) $(source) main.cpp
 	cc -o maintest main.cpp $(source) $(lib)
